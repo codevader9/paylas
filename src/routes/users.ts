@@ -57,7 +57,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   if (req.params.id === req.userId) { res.status(400).json({ error: 'Kendinizi silemezsiniz' }); return }
 
   // Supabase Auth'dan sil
-  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(req.params.id)
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(req.params.id as string)
   if (authError) { res.status(500).json({ error: authError.message }); return }
 
   // Profile'dan da sil (cascade ile otomatik silinmeli ama garanti olsun)
