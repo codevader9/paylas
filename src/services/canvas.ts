@@ -379,10 +379,22 @@ export function getPlaceholderPath(sport: string, siteId?: string): string {
   return path.join(PLACEHOLDERS_DIR, 'default.png')
 }
 
-export function getSiteLogoPath(siteId: string): string | null {
-  for (const ext of ['png', 'jpg', 'jpeg', 'webp']) {
-    const logoPath = path.join(SITE_LOGOS_DIR, `${siteId}.${ext}`)
-    if (fs.existsSync(logoPath)) return logoPath
-  }
+export async function getSiteLogoPath(siteId: string): Promise<string | null> {
+  // Lokal cache kontrol
+  const localPath = path.join(SITE_LOGOS_DIR, `${siteId}.png`)
+  if (fs.existsSync(localPath)) return localPath
+
+  // Supabase Storage'dan indir ve cache'le
+  try {
+    const { supabaseAdmin } = await import('../config/supabase.js')
+    const { data } = await supabaseAdmin.storage.from('site-logos').download(`${siteId}.png`)
+    if (data) {
+      const buffer = Buffer.from(await data.arrayBuffer())
+      if (!fs.existsSync(SITE_LOGOS_DIR)) fs.mkdirSync(SITE_LOGOS_DIR, { recursive: true })
+      fs.writeFileSync(localPath, buffer)
+      console.log('[Canvas] Logo cached from storage:', siteId)
+      return localPath
+    }
+  } catch {}
   return null
 }

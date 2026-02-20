@@ -93,7 +93,7 @@ app.post('/api/test/publish-match', async (req, res) => {
 
     const { getPlaceholderPath, getSiteLogoPath } = await import('./services/canvas.js')
     const placeholderPath = getPlaceholderPath(match.sport, site_id)
-    const siteLogoPath = site_id ? getSiteLogoPath(site_id) : null
+    const siteLogoPath = site_id ? await getSiteLogoPath(site_id) : null
     console.log('[Test Publish] Site logo:', siteLogoPath || 'YOK')
 
     const buffer = await generateMatchImage({

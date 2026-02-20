@@ -42,41 +42,62 @@ router.delete('/:id', authMiddleware as any, adminOnly as any, async (req: AuthR
   res.json({ success: true })
 })
 
-// Logo upload
+// Logo upload -> Supabase Storage
 router.post('/:id/logo', authMiddleware as any, adminOnly as any, async (req: AuthRequest, res: Response) => {
   const { logo } = req.body
   if (!logo) { res.status(400).json({ error: 'Logo verisi gerekli' }); return }
   try {
     const base64Data = logo.replace(/^data:image\/\w+;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
+    const pngBuffer = await sharp(buffer).resize(600, 200, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()
+
+    const fileName = `${req.params.id}.png`
+    await supabaseAdmin.storage.from('site-logos').upload(fileName, pngBuffer, {
+      contentType: 'image/png', upsert: true,
+    })
+
+    // Lokal cache'e de yaz (canvas için)
     const siteLogosDir = path.join(process.cwd(), 'assets', 'site-logos')
     if (!fs.existsSync(siteLogosDir)) fs.mkdirSync(siteLogosDir, { recursive: true })
-    const logoPath = path.join(siteLogosDir, `${req.params.id}.png`)
-    await sharp(buffer).resize(600, 200, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(logoPath)
+    fs.writeFileSync(path.join(siteLogosDir, fileName), pngBuffer)
+
     res.json({ success: true })
-  } catch (err: any) { res.status(500).json({ error: err.message }) }
+  } catch (err: any) {
+    console.error('[Sites] Logo upload error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 router.delete('/:id/logo', authMiddleware as any, adminOnly as any, async (req: AuthRequest, res: Response) => {
-  const siteLogosDir = path.join(process.cwd(), 'assets', 'site-logos')
-  for (const ext of ['png', 'jpg', 'jpeg', 'webp']) {
-    const p = path.join(siteLogosDir, `${req.params.id}.${ext}`)
-    if (fs.existsSync(p)) fs.unlinkSync(p)
-  }
+  await supabaseAdmin.storage.from('site-logos').remove([`${req.params.id}.png`])
+  const localPath = path.join(process.cwd(), 'assets', 'site-logos', `${req.params.id}.png`)
+  if (fs.existsSync(localPath)) fs.unlinkSync(localPath)
   res.json({ success: true })
 })
 
 router.get('/:id/logo', async (req: Request, res: Response) => {
+  // Önce lokal cache kontrol et
   const siteLogosDir = path.join(process.cwd(), 'assets', 'site-logos')
-  for (const ext of ['png', 'jpg', 'jpeg', 'webp']) {
-    const p = path.join(siteLogosDir, `${req.params.id}.${ext}`)
-    if (fs.existsSync(p)) {
-      res.set('Content-Type', ext === 'png' ? 'image/png' : 'image/jpeg')
-      res.send(fs.readFileSync(p))
-      return
-    }
+  const localPath = path.join(siteLogosDir, `${req.params.id}.png`)
+  if (fs.existsSync(localPath)) {
+    res.set('Content-Type', 'image/png')
+    res.set('Cache-Control', 'public, max-age=3600')
+    res.send(fs.readFileSync(localPath))
+    return
   }
-  res.status(404).json({ error: 'Logo bulunamadı' })
+
+  // Yoksa Supabase Storage'dan çek ve cache'le
+  const { data } = await supabaseAdmin.storage.from('site-logos').download(`${req.params.id}.png`)
+  if (data) {
+    const buffer = Buffer.from(await data.arrayBuffer())
+    if (!fs.existsSync(siteLogosDir)) fs.mkdirSync(siteLogosDir, { recursive: true })
+    fs.writeFileSync(localPath, buffer)
+    res.set('Content-Type', 'image/png')
+    res.set('Cache-Control', 'public, max-age=3600')
+    res.send(buffer)
+    return
+  }
+  res.status(404).send('')
 })
 
 export default router

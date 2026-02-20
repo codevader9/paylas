@@ -17,7 +17,7 @@ router.post('/generate', async (req: AuthRequest, res: Response) => {
       leagueName: match.league_name, leagueLogo: match.league_logo,
       matchDate: match.match_date, venue: match.venue, sport: match.sport,
       placeholderPath: getPlaceholderPath(match.sport, site_id),
-      siteLogoPath: site_id ? getSiteLogoPath(site_id) : null,
+      siteLogoPath: await getSiteLogoPath(site_id),
     })
     res.set('Content-Type', 'image/png')
     res.send(buffer)
@@ -35,7 +35,7 @@ router.post('/preview', async (req: AuthRequest, res: Response) => {
       leagueName: league_name || 'Lig', matchDate: match_date || new Date().toISOString(),
       venue, sport: sport || 'football',
       placeholderPath: getPlaceholderPath(sport || 'football', site_id),
-      siteLogoPath: site_id ? getSiteLogoPath(site_id) : null,
+      siteLogoPath: await getSiteLogoPath(site_id),
     })
     res.set('Content-Type', 'image/png')
     res.send(buffer)

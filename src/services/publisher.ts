@@ -48,7 +48,7 @@ export async function publishPost(params: PublishParams, db?: SupabaseClient) {
       .from('matches').select('*').eq('id', params.match_id).single()
     if (match) {
       const placeholderPath = getPlaceholderPath(match.sport, params.site_id)
-      const siteLogoPath = getSiteLogoPath(params.site_id)
+      const siteLogoPath = await getSiteLogoPath(params.site_id)
       imageBuffer = await generateMatchImage({
         homeTeam: match.home_team, awayTeam: match.away_team,
         homeLogo: match.home_logo, awayLogo: match.away_logo,
