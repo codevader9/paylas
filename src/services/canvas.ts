@@ -181,11 +181,18 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
     siteLogoPath = null, savePath = null,
   } = options
 
-  // Null-safe string değerleri (yazıların görünmesi için)
-  const homeTeam = (options.homeTeam != null && options.homeTeam !== '') ? String(options.homeTeam) : 'Ev Sahibi'
-  const awayTeam = (options.awayTeam != null && options.awayTeam !== '') ? String(options.awayTeam) : 'Deplasman'
-  const leagueName = (options.leagueName != null && options.leagueName !== '') ? String(options.leagueName) : 'Lig'
-  const matchDate = (options.matchDate != null && options.matchDate !== '') ? String(options.matchDate) : new Date().toISOString()
+  // Null-safe string - "null", "undefined" literal string'leri de fallback'e çevir
+  const safe = (val: any, fallback: string): string => {
+    if (val == null) return fallback
+    const s = String(val).trim()
+    if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return fallback
+    return s
+  }
+  const homeTeam = safe(options.homeTeam, 'Ev Sahibi')
+  const awayTeam = safe(options.awayTeam, 'Deplasman')
+  const leagueName = safe(options.leagueName, 'Lig')
+  const matchDate = safe(options.matchDate, new Date().toISOString())
+  console.log('[Canvas] Metinler:', { homeTeam, awayTeam, leagueName, matchDate: matchDate.slice(0, 20) })
 
   let placeholderPath = options.placeholderPath
   if (placeholderPath && !fs.existsSync(placeholderPath)) placeholderPath = undefined

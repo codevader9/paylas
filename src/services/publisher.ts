@@ -47,13 +47,18 @@ export async function publishPost(params: PublishParams, db?: SupabaseClient) {
     const { data: match } = await client
       .from('matches').select('*').eq('id', params.match_id).single()
     if (match) {
-      const placeholderPath = getPlaceholderPath(match.sport, params.site_id)
+      const r = match.raw_data || {}
+      const placeholderPath = getPlaceholderPath(match.sport || 'football', params.site_id)
       const siteLogoPath = await getSiteLogoPath(params.site_id)
+      console.log('[Publish] Match verisi:', { home_team: match.home_team, away_team: match.away_team, league_name: match.league_name })
       imageBuffer = await generateMatchImage({
-        homeTeam: match.home_team, awayTeam: match.away_team,
+        homeTeam: match.home_team ?? r.strHomeTeam ?? 'Ev Sahibi',
+        awayTeam: match.away_team ?? r.strAwayTeam ?? 'Deplasman',
         homeLogo: match.home_logo, awayLogo: match.away_logo,
-        leagueName: match.league_name, leagueLogo: match.league_logo,
-        matchDate: match.match_date, venue: match.venue, sport: match.sport,
+        leagueName: match.league_name ?? r.strLeague ?? 'Lig',
+        leagueLogo: match.league_logo,
+        matchDate: match.match_date ?? (r.dateEvent && r.strTime ? `${r.dateEvent}T${r.strTime}` : null) ?? new Date().toISOString(),
+        venue: match.venue, sport: match.sport || 'football',
         placeholderPath, siteLogoPath,
       })
       console.log('[Publish] Görsel oluşturuldu:', imageBuffer.length, 'bytes')
