@@ -15,6 +15,28 @@ for (const dir of [ASSETS_DIR, PLACEHOLDERS_DIR, SITE_LOGOS_DIR, TEMP_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 }
 
+// Font - Railway/Linux'ta sans-serif bazen çözülmediği için explicit font kaydet
+const FONT_PATHS = [
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+  '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf',
+]
+let TEXT_FONT_FAMILY = 'sans-serif'
+for (const fp of FONT_PATHS) {
+  if (fs.existsSync(fp)) {
+    try {
+      registerFont(fp, { family: 'DejaVuBold', weight: 'bold' })
+      TEXT_FONT_FAMILY = 'DejaVuBold'
+      console.log('[Canvas] Font yüklendi:', fp)
+      break
+    } catch (e) {
+      console.warn('[Canvas] Font yüklenemedi:', fp, (e as Error).message)
+    }
+  }
+}
+
 const LOGO_RENDER_SIZE = 512
 
 interface MatchImageOptions {
@@ -154,10 +176,16 @@ async function loadImageSafe(url: string): Promise<Buffer | null> {
 
 export async function generateMatchImage(options: MatchImageOptions): Promise<Buffer> {
   const {
-    homeTeam, awayTeam, homeLogo, awayLogo,
-    leagueName, matchDate, venue, sport,
+    homeLogo, awayLogo,
+    venue, sport,
     siteLogoPath = null, savePath = null,
   } = options
+
+  // Null-safe string değerleri (yazıların görünmesi için)
+  const homeTeam = (options.homeTeam != null && options.homeTeam !== '') ? String(options.homeTeam) : 'Ev Sahibi'
+  const awayTeam = (options.awayTeam != null && options.awayTeam !== '') ? String(options.awayTeam) : 'Deplasman'
+  const leagueName = (options.leagueName != null && options.leagueName !== '') ? String(options.leagueName) : 'Lig'
+  const matchDate = (options.matchDate != null && options.matchDate !== '') ? String(options.matchDate) : new Date().toISOString()
 
   let placeholderPath = options.placeholderPath
   if (placeholderPath && !fs.existsSync(placeholderPath)) placeholderPath = undefined
@@ -239,7 +267,7 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
 
     // === VS YAZISI (ortada) ===
     const vsY = logoY + logoSize / 2 + 5
-    ctx.font = "bold 52px sans-serif"
+    ctx.font = `bold 52px ${TEXT_FONT_FAMILY}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
 
@@ -258,7 +286,7 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
     // === TAKIM İSİMLERİ ===
     const nameY = logoY + logoSize + 20
     const teamFontSize = Math.min(28, Math.floor(W * 0.024))
-    ctx.font = `bold ${teamFontSize}px sans-serif`
+    ctx.font = `bold ${teamFontSize}px ${TEXT_FONT_FAMILY}`
     ctx.fillStyle = '#ffffff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
@@ -292,30 +320,37 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
     ctx.shadowColor = 'rgba(0,0,0,0.9)'
     ctx.shadowBlur = 8
     ctx.shadowOffsetY = 2
-    ctx.font = "bold 46px sans-serif"
+    ctx.font = `bold 46px ${TEXT_FONT_FAMILY}`
     ctx.fillStyle = '#ffffff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(leagueName.toUpperCase(), W / 2, H * 0.80)
 
     // === TARİH / SAAT ===
-    const startAt = new Date(matchDate)
-    const dateStr = new Intl.DateTimeFormat('tr-TR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-    }).format(startAt)
-    const timeStr = new Intl.DateTimeFormat('tr-TR', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
-    }).format(startAt)
+    let dateStr = '--/--/----'
+    let timeStr = '--:--'
+    try {
+      const startAt = new Date(matchDate)
+      if (!isNaN(startAt.getTime())) {
+        dateStr = new Intl.DateTimeFormat('tr-TR', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+        }).format(startAt)
+        timeStr = new Intl.DateTimeFormat('tr-TR', {
+          hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
+        }).format(startAt)
+      }
+    } catch {}
 
-    ctx.font = "bold 30px sans-serif"
+    ctx.font = `bold 30px ${TEXT_FONT_FAMILY}`
     ctx.fillStyle = 'rgba(255,255,255,0.8)'
     ctx.fillText(`${dateStr}  •  ${timeStr}`, W / 2, H * 0.88)
 
     // === MEKAN (opsiyonel) ===
-    if (venue) {
-      ctx.font = "16px sans-serif"
+    const venueStr = (venue != null && typeof venue === 'string' && venue.trim()) ? String(venue).trim() : ''
+    if (venueStr) {
+      ctx.font = `16px ${TEXT_FONT_FAMILY}`
       ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.fillText(venue, W / 2, H * 0.94)
+      ctx.fillText(venueStr, W / 2, H * 0.94)
     }
 
     ctx.shadowBlur = 0
