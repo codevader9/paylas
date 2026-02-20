@@ -1,0 +1,2 @@
+[phases.setup]
+aptPkgs = ["libcairo2-dev", "libjpeg-dev", "libpango1.0-dev", "libgif-dev", "build-essential", "g++", "fontconfig", "fonts-dejavu-core", "fonts-liberation"]
