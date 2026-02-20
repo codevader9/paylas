@@ -95,41 +95,45 @@ export async function publishPost(params: PublishParams, db?: SupabaseClient) {
           throw new Error('Twitter API için proxy zorunludur. Sosyal Hesaplar\'da bu hesaba proxy atayın.')
         }
 
-        // login_cookies yoksa önce login yap
-        if (!creds.login_cookies) {
-          if (!creds.user_name || !creds.password) {
-            throw new Error('Twitter hesabında user_name/password veya login_cookies eksik')
+        const doLogin = async () => {
+          if (!creds.user_name || !creds.password || !creds.email) {
+            throw new Error('Twitter: user_name, email ve password gerekli')
           }
-          console.log('[Publish] Twitter login yapılıyor...')
           const { loginTwitter } = await import('./twitter.js')
           const loginResult = await loginTwitter(creds, params.social_account_id)
-          console.log('[Publish] Twitter login sonucu:', JSON.stringify(loginResult).slice(0, 200))
+          const cookies = loginResult?.login_cookies || loginResult?.login_cookie || loginResult?.cookies
+          if (!cookies) throw new Error(loginResult?.msg || loginResult?.message || 'Twitter giriş başarısız')
+          creds.login_cookies = cookies
+          if (db) await db.from('social_accounts').update({ credentials: { ...creds } }).eq('id', params.social_account_id)
+          console.log('[Publish] Twitter login OK')
+        }
+        if (!creds.login_cookies) await doLogin()
 
-          if (loginResult?.login_cookies || loginResult?.cookies) {
-            creds.login_cookies = loginResult.login_cookies || loginResult.cookies
-            if (db) {
-              await db.from('social_accounts')
-                .update({ credentials: { ...creds } })
-                .eq('id', params.social_account_id)
+        const execWithRetry = async (fn: () => Promise<any>) => {
+          try {
+            return await fn()
+          } catch (e: any) {
+            const m = String(e?.message || '')
+            if (m.includes('401') || m.includes('Could not authenticate')) {
+              console.log('[Publish] 401 - Cookie geçersiz, yeniden login...')
+              delete creds.login_cookies
+              await doLogin()
+              return await fn()
             }
+            throw e
           }
         }
 
         let mediaIds: string[] = []
-        // Buffer varsa direkt upload, URL varsa URL'den indir ve upload
         if (imageBuffer) {
-          console.log('[Publish] Twitter media upload (buffer)...')
-          const mediaResult = await uploadMedia(imageBuffer, creds, params.social_account_id)
-          console.log('[Publish] Media upload sonucu:', JSON.stringify(mediaResult).slice(0, 200))
+          const mediaResult = await execWithRetry(() => uploadMedia(imageBuffer, creds, params.social_account_id))
           if (mediaResult?.media_id) mediaIds = [mediaResult.media_id]
         } else if (imageUrl) {
-          console.log('[Publish] Twitter media upload (url)...')
-          const mediaResult = await uploadMedia(imageUrl, creds, params.social_account_id)
+          const mediaResult = await execWithRetry(() => uploadMedia(imageUrl!, creds, params.social_account_id))
           if (mediaResult?.media_id) mediaIds = [mediaResult.media_id]
         }
 
-        console.log('[Publish] Tweet gönderiliyor, media:', mediaIds.length, 'adet')
-        result = await createTweet({ text: params.caption, mediaIds }, creds, params.social_account_id)
+        result = await execWithRetry(() => createTweet({ text: params.caption, mediaIds }, creds, params.social_account_id))
         console.log('[Publish] Tweet sonucu:', JSON.stringify(result).slice(0, 200))
         externalPostId = result?.data?.id || result?.tweet_id
         break
