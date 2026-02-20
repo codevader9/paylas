@@ -12,6 +12,7 @@
     "axios": "^1.7.0",
     "canvas": "^3.1.0",
     "cors": "^2.8.5",
+    "dejavu-fonts-ttf": "^2.37.3",
     "dotenv": "^16.4.0",
     "express": "^5.1.0",
     "form-data": "^4.0.0",

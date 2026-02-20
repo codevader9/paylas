@@ -1,10 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { createRequire } from 'module'
 import { createCanvas, loadImage, registerFont } from 'canvas'
 import axios from 'axios'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
+
+const require = createRequire(import.meta.url)
 
 const ASSETS_DIR = path.join(process.cwd(), 'assets')
 const PLACEHOLDERS_DIR = path.join(ASSETS_DIR, 'placeholders')
@@ -15,20 +18,22 @@ for (const dir of [ASSETS_DIR, PLACEHOLDERS_DIR, SITE_LOGOS_DIR, TEMP_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 }
 
-// Font - Railway/Linux'ta sans-serif bazen çözülmediği için explicit font kaydet
-const FONT_PATHS = [
-  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-  '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-  '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-  '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-  '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf',
-]
+// Font - dejavu-fonts-ttf paketinden (Windows/Linux/Railway)
 let TEXT_FONT_FAMILY = 'sans-serif'
-for (const fp of FONT_PATHS) {
+const fontPaths: string[] = []
+try {
+  fontPaths.push(require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf'))
+  fontPaths.push(require.resolve('dejavu-fonts-ttf/ttf/DejaVuSans.ttf'))
+} catch {}
+fontPaths.push(
+  path.join(process.cwd(), 'node_modules', 'dejavu-fonts-ttf', 'ttf', 'DejaVuSans-Bold.ttf'),
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+)
+for (const fp of fontPaths) {
   if (fs.existsSync(fp)) {
     try {
-      registerFont(fp, { family: 'DejaVuBold', weight: 'bold' })
-      TEXT_FONT_FAMILY = 'DejaVuBold'
+      registerFont(fp, { family: 'MatchFont', weight: 'bold' })
+      TEXT_FONT_FAMILY = 'MatchFont'
       console.log('[Canvas] Font yüklendi:', fp)
       break
     } catch (e) {
