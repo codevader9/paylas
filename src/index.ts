@@ -13,6 +13,7 @@ import telegramRouter from './routes/telegram.js'
 import imagesRouter from './routes/images.js'
 import proxiesRouter from './routes/proxies.js'
 import statsRouter from './routes/stats.js'
+import usersRouter from './routes/users.js'
 
 const app = express()
 
@@ -30,6 +31,7 @@ app.use('/api/telegram', telegramRouter)
 app.use('/api/images', imagesRouter)
 app.use('/api/proxies', proxiesRouter)
 app.use('/api/stats', statsRouter)
+app.use('/api/users', usersRouter)
 
 // Public logo serve (auth gerektirmez, img tag'ları için)
 import fs from 'fs'
