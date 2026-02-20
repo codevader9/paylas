@@ -68,6 +68,8 @@ export async function uploadMedia(
   _accountId?: string
 ) {
   const proxyUrl = getProxyUrl(credentials)
+  if (!credentials.login_cookies) throw new Error('Twitter login gerekli - önce giriş yapın')
+  if (!proxyUrl) throw new Error('Media upload için proxy zorunlu')
   const FormData = (await import('form-data')).default
   const form = new FormData()
 
@@ -83,18 +85,24 @@ export async function uploadMedia(
 
   try {
     const { data } = await axios.post(`${API_BASE}/twitter/upload_media_v2`, form, {
-    headers: {
-      'X-API-Key': env.twitterApiKey,
-      ...form.getHeaders(),
-    },
-    maxContentLength: Infinity,
-    maxBodyLength: Infinity,
-  })
-    if (data?.status === 'error') throw new Error(data?.msg || 'Media upload hatası')
+      headers: {
+        'X-API-Key': env.twitterApiKey,
+        ...form.getHeaders(),
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    })
+    if (data?.status === 'error') {
+      const msg = data?.msg || data?.message || data?.error || 'Media upload hatası'
+      console.error('[Twitter] Upload media error:', JSON.stringify(data))
+      throw new Error(String(msg))
+    }
     return data
   } catch (e: any) {
-    const msg = e.response?.data?.msg || e.response?.data?.message || e.message || 'Bilinmeyen hata'
-    throw new Error(typeof msg === 'string' ? msg : 'Media upload hatası')
+    const d = e.response?.data
+    const msg = d?.msg || d?.message || (typeof d?.error === 'string' ? d.error : null) || e.message || 'Media upload hatası'
+    console.error('[Twitter] Upload media exception:', msg, d ? JSON.stringify(d).slice(0, 300) : '')
+    throw new Error(String(msg))
   }
 }
 
