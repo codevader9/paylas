@@ -239,7 +239,7 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
 
     // === VS YAZISI (ortada) ===
     const vsY = logoY + logoSize / 2 + 5
-    ctx.font = "bold 52px 'Impact', 'Arial Black', sans-serif"
+    ctx.font = "bold 52px sans-serif"
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
 
@@ -257,8 +257,8 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
 
     // === TAKIM İSİMLERİ ===
     const nameY = logoY + logoSize + 20
-    const teamFontSize = Math.min(26, Math.floor(W * 0.022))
-    ctx.font = `bold ${teamFontSize}px 'Impact', 'Arial Black', sans-serif`
+    const teamFontSize = Math.min(28, Math.floor(W * 0.024))
+    ctx.font = `bold ${teamFontSize}px sans-serif`
     ctx.fillStyle = '#ffffff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
@@ -292,7 +292,7 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
     ctx.shadowColor = 'rgba(0,0,0,0.9)'
     ctx.shadowBlur = 8
     ctx.shadowOffsetY = 2
-    ctx.font = "bold 46px 'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
+    ctx.font = "bold 46px sans-serif"
     ctx.fillStyle = '#ffffff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -307,13 +307,13 @@ export async function generateMatchImage(options: MatchImageOptions): Promise<Bu
       hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
     }).format(startAt)
 
-    ctx.font = "bold 30px 'Impact', 'Arial Black', sans-serif"
+    ctx.font = "bold 30px sans-serif"
     ctx.fillStyle = 'rgba(255,255,255,0.8)'
     ctx.fillText(`${dateStr}  •  ${timeStr}`, W / 2, H * 0.88)
 
     // === MEKAN (opsiyonel) ===
     if (venue) {
-      ctx.font = "16px 'Arial', sans-serif"
+      ctx.font = "16px sans-serif"
       ctx.fillStyle = 'rgba(255,255,255,0.5)'
       ctx.fillText(venue, W / 2, H * 0.94)
     }
