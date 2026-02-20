@@ -88,7 +88,12 @@ export async function publishPost(params: PublishParams, db?: SupabaseClient) {
     switch (params.platform) {
       case 'twitter': {
         const creds = account.credentials as any
-        console.log('[Publish] Twitter hesabı:', account.account_name, 'login_cookies:', !!creds.login_cookies)
+        const hasProxy = !!creds.__proxy_url
+        console.log('[Publish] Twitter hesabı:', account.account_name, 'login_cookies:', !!creds.login_cookies, 'proxy:', hasProxy)
+
+        if (!hasProxy) {
+          throw new Error('Twitter API için proxy zorunludur. Sosyal Hesaplar\'da bu hesaba proxy atayın.')
+        }
 
         // login_cookies yoksa önce login yap
         if (!creds.login_cookies) {

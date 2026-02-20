@@ -54,6 +54,7 @@ export async function loginTwitter(credentials: TwitterCredentials, _accountId?:
   const { data } = await axios.post(`${API_BASE}/twitter/user_login_v2`, body, {
     headers: { 'X-API-Key': env.twitterApiKey, 'Content-Type': 'application/json' },
   })
+  if (data?.status === 'error') throw new Error(data?.msg || 'Twitter login hatası')
   return data
 }
 
@@ -80,7 +81,8 @@ export async function uploadMedia(
   if (credentials.login_cookies) form.append('login_cookies', credentials.login_cookies)
   if (proxyUrl) form.append('proxy', proxyUrl)
 
-  const { data } = await axios.post(`${API_BASE}/twitter/upload_media_v2`, form, {
+  try {
+    const { data } = await axios.post(`${API_BASE}/twitter/upload_media_v2`, form, {
     headers: {
       'X-API-Key': env.twitterApiKey,
       ...form.getHeaders(),
@@ -88,7 +90,12 @@ export async function uploadMedia(
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
   })
-  return data
+    if (data?.status === 'error') throw new Error(data?.msg || 'Media upload hatası')
+    return data
+  } catch (e: any) {
+    const msg = e.response?.data?.msg || e.response?.data?.message || e.message || 'Bilinmeyen hata'
+    throw new Error(typeof msg === 'string' ? msg : 'Media upload hatası')
+  }
 }
 
 /**
@@ -106,10 +113,16 @@ export async function createTweet(params: CreateTweetParams, credentials: Twitte
   if (params.isNoteTweet) body.is_note_tweet = true
   if (proxyUrl) body.proxy = proxyUrl
 
-  const { data } = await axios.post(`${API_BASE}/twitter/create_tweet_v2`, body, {
-    headers: { 'X-API-Key': env.twitterApiKey, 'Content-Type': 'application/json' },
-  })
-  return data
+  try {
+    const { data } = await axios.post(`${API_BASE}/twitter/create_tweet_v2`, body, {
+      headers: { 'X-API-Key': env.twitterApiKey, 'Content-Type': 'application/json' },
+    })
+    if (data?.status === 'error') throw new Error(data?.msg || 'Tweet oluşturulamadı')
+    return data
+  } catch (e: any) {
+    const msg = e.response?.data?.msg || e.response?.data?.message || e.message || 'Bilinmeyen hata'
+    throw new Error(typeof msg === 'string' ? msg : 'Tweet oluşturulamadı')
+  }
 }
 
 /**
