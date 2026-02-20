@@ -14,21 +14,19 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
   res.json(data)
 })
 
-// Create user (admin creates via Supabase Auth)
+// Create user
 router.post('/', async (req: AuthRequest, res: Response) => {
   const { email, password, full_name, role } = req.body
   if (!email || !password) { res.status(400).json({ error: 'Email ve şifre gerekli' }); return }
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: { full_name: full_name || '' },
+    options: { data: { full_name: full_name || '' } },
   })
 
   if (authError) { res.status(500).json({ error: authError.message }); return }
 
-  // Profil oluştur/güncelle
   if (authData.user) {
     await supabaseAdmin.from('profiles').upsert({
       id: authData.user.id,
@@ -51,17 +49,12 @@ router.put('/:id/role', async (req: AuthRequest, res: Response) => {
   res.json({ success: true })
 })
 
-// Delete user
+// Delete user (profile'dan sil, auth cascade ile gider)
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
-  // Kendini silemesin
   if (req.params.id === req.userId) { res.status(400).json({ error: 'Kendinizi silemezsiniz' }); return }
 
-  // Supabase Auth'dan sil
-  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(req.params.id as string)
-  if (authError) { res.status(500).json({ error: authError.message }); return }
-
-  // Profile'dan da sil (cascade ile otomatik silinmeli ama garanti olsun)
-  await supabaseAdmin.from('profiles').delete().eq('id', req.params.id)
+  const { error } = await req.supabase!.from('profiles').delete().eq('id', req.params.id as string)
+  if (error) { res.status(500).json({ error: error.message }); return }
 
   res.json({ success: true })
 })
